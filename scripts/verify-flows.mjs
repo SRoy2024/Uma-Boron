@@ -29,7 +29,7 @@ for (const event of pujoCalendarEvents) {
 
 assert.equal(isEditorEmail('sohamroy.pkt@gmail.com'), true)
 assert.equal(isEditorEmail(' SOHAMROY.PKT@GMAIL.COM '), true)
-assert.equal(isEditorEmail('sohamroy.kt@gmail.com'), true)
+assert.equal(isEditorEmail('sohamroy.kt@gmail.com'), false)
 assert.equal(isEditorEmail('visitor@example.com'), false)
 const adminSession = { user: { id: 'admin-user', email: ADMIN_EMAILS[0], app_metadata: { role: 'admin' } } }
 assert.equal(isAdminSession(adminSession), true)

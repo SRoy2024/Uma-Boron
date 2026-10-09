@@ -1,5 +1,4 @@
 export const ADMIN_EMAILS = Object.freeze([
-  'sohamroy.kt@gmail.com',
   'sohamroy.pkt@gmail.com',
 ])
 
