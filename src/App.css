@@ -4950,6 +4950,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,[r
 .auth-mode-tabs button { min-height:40px; display:flex; align-items:center; justify-content:center; gap:6px; border:0; border-radius:10px; background:transparent; color:#4c5971; font-weight:700; cursor:pointer; }
 .auth-mode-tabs button.is-active { background:#172033; color:#fffdf8; box-shadow:0 5px 14px rgba(23,32,51,.22); }
 .editor-access-confirmed { padding:10px 12px; display:flex; align-items:center; gap:7px; border:1px solid rgba(201,154,54,.42); border-radius:10px; background:#f8efd8; color:#6a4b0b; }
+.admin-invite-panel { margin-top:.35rem; padding:1rem; border:1px solid rgba(201,154,54,.42); border-radius:14px; background:#fbf4e3; }
+.admin-invite-panel h3 { margin:0; display:flex; align-items:center; gap:.45rem; font:600 1rem/1.2 var(--font-body); color:#513806; }
+.admin-invite-panel>p { margin:.55rem 0 0; color:#786545; font-size:.75rem; line-height:1.45; }
+.temporary-password { margin-top:.9rem; padding:.8rem; display:grid; gap:.45rem; border-radius:10px; background:#2c2417; color:#fff8e8; }
+.temporary-password span,.temporary-password small { font-size:.7rem; color:#dfcfac; }
+.temporary-password code { overflow-wrap:anywhere; font-size:.9rem; }
+.temporary-password button { width:max-content; min-height:34px; padding:.35rem .65rem; display:flex; align-items:center; gap:.35rem; border:1px solid #d5b65f; border-radius:8px; background:#f7df92; color:#30230d; cursor:pointer; }
 
 .festival-reminder-prompt {
   position:fixed; right:18px; bottom:92px; z-index:84; width:min(390px,calc(100vw - 24px)); padding:18px;

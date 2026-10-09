@@ -3,7 +3,7 @@ import { contactInferenceTestCases, inferRelationshipFromContactName } from '../
 import { pujoCalendarEvents, generateGoogleCalendarUrl, generateICSContent } from '../src/data/calendarEvents.js'
 import { festivalSchedule, isChapterUnlocked } from '../src/lib/festivalSchedule.js'
 import { WMO_WEATHER_MAP } from '../src/lib/weather.js'
-import { checkAuthRateLimit, isEditorEmail } from '../src/lib/authAccess.js'
+import { ADMIN_EMAILS, checkAuthRateLimit, isAdminSession, isEditorEmail, isEditorSession } from '../src/lib/authAccess.js'
 
 for (const [name, expected] of contactInferenceTestCases) {
   assert.equal(inferRelationshipFromContactName(name).id, expected, `contact inference failed for ${name}`)
@@ -29,7 +29,15 @@ for (const event of pujoCalendarEvents) {
 
 assert.equal(isEditorEmail('sohamroy.pkt@gmail.com'), true)
 assert.equal(isEditorEmail(' SOHAMROY.PKT@GMAIL.COM '), true)
+assert.equal(isEditorEmail('sohamroy.kt@gmail.com'), true)
 assert.equal(isEditorEmail('visitor@example.com'), false)
+const adminSession = { user: { id: 'admin-user', email: ADMIN_EMAILS[0], app_metadata: { role: 'admin' } } }
+assert.equal(isAdminSession(adminSession), true)
+assert.equal(isEditorSession(adminSession), true)
+assert.equal(isAdminSession({ user: { id: 'admin-user', email: ADMIN_EMAILS[0], app_metadata: {} } }), false)
+assert.equal(isAdminSession({ user: { id: 'invited-admin', email: 'invited@example.com', app_metadata: { role: 'admin' } } }), true)
+assert.equal(isAdminSession({ user: { email: 'visitor@example.com', app_metadata: { role: 'admin' } } }), false)
+assert.equal(isEditorSession({ user: { id: 'owner', email: 'sohamroy.pkt@gmail.com', app_metadata: {} } }), false)
 assert.equal(checkAuthRateLimit([1, 2, 3, 4], 60_000).allowed, true)
 assert.equal(checkAuthRateLimit([59_995, 59_996, 59_997, 59_998, 59_999], 60_000).allowed, false)
 

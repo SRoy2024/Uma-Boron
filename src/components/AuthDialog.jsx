@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { Eye, EyeOff, KeyRound, LogIn, LogOut, Mail, ShieldCheck, UserPlus, X } from 'lucide-react'
+import { Copy, Eye, EyeOff, KeyRound, LogIn, LogOut, Mail, ShieldCheck, UserPlus, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { checkAuthRateLimit, isEditorEmail } from '../lib/authAccess'
+import { checkAuthRateLimit, isAdminSession, isEditorSession } from '../lib/authAccess'
 
 export default function AuthDialog({ open, onClose, session, configured, initialMode = 'signin', onToast }) {
   const [mode, setMode] = useState('signin')
@@ -10,6 +10,8 @@ export default function AuthDialog({ open, onClose, session, configured, initial
   const [visible, setVisible] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteResult, setInviteResult] = useState(null)
   const closeRef = useRef(null)
   const attemptsRef = useRef([])
 
@@ -54,12 +56,15 @@ export default function AuthDialog({ open, onClose, session, configured, initial
       return
     }
     if (mode === 'signup') {
-      const ok = await run(() => supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/` } }))
+      const ok = await run(() => supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/`, data: { password_enabled: true } } }))
       if (ok) onToast('Check your email to confirm the account. Default Supabase email is not production-ready.')
       return
     }
     if (mode === 'password') {
-      const ok = await run(() => supabase.auth.updateUser({ password }))
+      const ok = await run(() => supabase.auth.updateUser({
+        password,
+        data: { ...session?.user?.user_metadata, password_enabled: true, force_password_change: false },
+      }))
       if (ok) { onToast('Password added to this account.'); setMode('signin') }
       return
     }
@@ -76,6 +81,25 @@ export default function AuthDialog({ open, onClose, session, configured, initial
     if (ok) { onToast('Signed out.'); onClose() }
   }
 
+  const inviteAdmin = async (event) => {
+    event.preventDefault()
+    if (!supabase || !isAdminSession(session)) return
+    setBusy(true); setError(''); setInviteResult(null)
+    try {
+      const { data, error: inviteError } = await supabase.functions.invoke('invite-admin', {
+        body: { email: inviteEmail },
+      })
+      if (inviteError) throw inviteError
+      setInviteResult(data)
+      setInviteEmail('')
+      onToast('Administrator invitation created.')
+    } catch {
+      setError('The administrator invitation could not be created. Check the address and try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -87,12 +111,30 @@ export default function AuthDialog({ open, onClose, session, configured, initial
           <div className="signed-in-state">
             <ShieldCheck size={28} />
             <p>Signed in as <strong>{session.user.email}</strong></p>
-            {isEditorEmail(session.user.email) && (
-              <p className="editor-access-confirmed"><ShieldCheck size={16} />Editor access active — every festival chapter is unlocked.</p>
+            {isEditorSession(session) && (
+              <p className="editor-access-confirmed"><ShieldCheck size={16} />{isAdminSession(session) ? 'Administrator access active' : 'Editor access active'} — every festival chapter is unlocked.</p>
             )}
             <button className="primary-action" type="button" onClick={() => setMode('password')}><KeyRound size={17} />Set or change email password</button>
             <button className="secondary-action" type="button" onClick={signOut}><LogOut size={17} />Sign out</button>
             {mode === 'password' && <form onSubmit={submit}><PasswordField value={password} setValue={setPassword} visible={visible} setVisible={setVisible} /><button className="primary-action" disabled={busy || password.length < 8}>{busy ? 'Saving…' : 'Save password'}</button></form>}
+            {isAdminSession(session) && (
+              <section className="admin-invite-panel" aria-labelledby="admin-invite-title">
+                <h3 id="admin-invite-title"><UserPlus size={17} />Invite an administrator</h3>
+                <p>The invitee receives a secure account invitation. Share the temporary password separately and ask them to replace it after signing in.</p>
+                <form onSubmit={inviteAdmin}>
+                  <label>Administrator email<input type="email" inputMode="email" autoCapitalize="none" autoCorrect="off" autoComplete="off" maxLength="254" required value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="admin@example.com" /></label>
+                  <button className="primary-action" type="submit" disabled={busy}>{busy ? 'Creating invitation…' : 'Invite administrator'}</button>
+                </form>
+                {inviteResult?.temporaryPassword && (
+                  <div className="temporary-password" role="status">
+                    <span>One-time temporary password</span>
+                    <code>{inviteResult.temporaryPassword}</code>
+                    <button type="button" onClick={async () => { await navigator.clipboard.writeText(inviteResult.temporaryPassword); onToast('Temporary password copied.') }}><Copy size={15} />Copy</button>
+                    <small>This value is shown only now. Send it through a separate trusted channel.</small>
+                  </div>
+                )}
+              </section>
+            )}
           </div>
         ) : (
           <>

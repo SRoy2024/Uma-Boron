@@ -30,7 +30,7 @@ import SupportModal from './components/SupportModal'
 import PandalMapSection from './components/PandalMapSection'
 import ReelsStreamSection from './components/ReelsStreamSection'
 import FestivalGate from './components/FestivalGate'
-import { EDITOR_EMAIL, isEditorEmail } from './lib/authAccess'
+import { isAdminSession, isEditorSession } from './lib/authAccess'
 import FestivalReminderPrompt from './components/FestivalReminderPrompt'
 import { hasSupabaseConfig, supabase } from './lib/supabase'
 import { isChapterUnlocked } from './lib/festivalSchedule'
@@ -119,14 +119,23 @@ function App() {
     [activeChapter],
   )
   const copy = getChapterCopy(chapter, language)
-  const isEditor = isEditorEmail(session?.user?.email)
+  const isAdmin = isAdminSession(session)
+  const isEditor = isEditorSession(session)
   const chapterUnlocked = isChapterUnlocked(activeChapter, now, isEditor)
 
   useEffect(() => {
     if (!supabase) return undefined
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null))
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession)
+      if (
+        event === 'SIGNED_IN' &&
+        nextSession?.user?.app_metadata?.provider === 'google' &&
+        !nextSession?.user?.user_metadata?.password_enabled
+      ) {
+        setAuthInitialMode('password')
+        setAuthOpen(true)
+      }
     })
     return () => data.subscription.unsubscribe()
   }, [])
@@ -210,7 +219,7 @@ function App() {
         </div>
 
         <div className="header-actions">
-          {isEditor && <span className="preview-chip is-on editor-access-chip"><Eye size={16} /><span>Editor access · All open</span></span>}
+          {isEditor && <span className="preview-chip is-on editor-access-chip"><Eye size={16} /><span>{isAdmin ? 'Admin' : 'Editor'} access · All open</span></span>}
           <label className="language-select">
             <Languages size={16} aria-hidden="true" />
             <span className="sr-only">Interface language</span>
@@ -240,7 +249,7 @@ function App() {
       {isEditor && (
         <div className="preview-banner editor-banner" role="status">
           <Eye size={15} aria-hidden="true" />
-          Editor access active for {EDITOR_EMAIL} — every festival chapter is available for review.
+          Administrator access active for {session?.user?.email} — every festival chapter is available for developer review.
         </div>
       )}
 
