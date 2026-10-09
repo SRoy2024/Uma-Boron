@@ -4,6 +4,7 @@ import { pujoCalendarEvents, generateGoogleCalendarUrl, generateICSContent } fro
 import { festivalSchedule, isChapterUnlocked } from '../src/lib/festivalSchedule.js'
 import { WMO_WEATHER_MAP } from '../src/lib/weather.js'
 import { ADMIN_EMAILS, checkAuthRateLimit, isAdminSession, isEditorEmail, isEditorSession } from '../src/lib/authAccess.js'
+import { reelsData } from '../src/data/reels.js'
 
 for (const [name, expected] of contactInferenceTestCases) {
   assert.equal(inferRelationshipFromContactName(name).id, expected, `contact inference failed for ${name}`)
@@ -52,4 +53,15 @@ assert.equal(WMO_WEATHER_MAP[0].condition, 'clear')
 assert.equal(WMO_WEATHER_MAP[3].condition, 'cloudy')
 assert.equal(WMO_WEATHER_MAP[63].condition, 'rain')
 
-console.log(`Verified ${contactInferenceTestCases.length} contact cases, ${pujoCalendarEvents.length} calendar/Google links, ${Object.keys(festivalSchedule).length} release gates, editor auth/rate limits, and live-weather ambience mapping.`)
+assert.equal(reelsData.length, 7, 'festival feed must contain one verified fallback per chapter')
+assert.equal(new Set(reelsData.map((reel) => reel.chapterId)).size, 7, 'festival feed chapter ids must be unique')
+for (const reel of reelsData) {
+  const video = new URL(reel.reelUrl)
+  const thumbnail = new URL(reel.thumbnailUrl)
+  assert.equal(video.protocol, 'https:', `${reel.id} video must use HTTPS`)
+  assert.ok(['www.youtube.com', 'youtube.com', 'youtu.be'].includes(video.hostname), `${reel.id} has an untrusted video host`)
+  assert.equal(thumbnail.hostname, 'i.ytimg.com', `${reel.id} has an untrusted thumbnail host`)
+  assert.equal(reel.platform, 'YouTube', `${reel.id} platform does not match its URL`)
+}
+
+console.log(`Verified ${contactInferenceTestCases.length} contact cases, ${pujoCalendarEvents.length} calendar/Google links, ${Object.keys(festivalSchedule).length} release gates, ${reelsData.length} trusted festival videos, editor auth/rate limits, and live-weather ambience mapping.`)

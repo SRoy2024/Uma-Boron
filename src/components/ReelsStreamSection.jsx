@@ -7,10 +7,11 @@ import {
   Play,
   Sparkles,
 } from 'lucide-react'
-import { reelsData } from '../data/reels'
+import { useFestivalReels } from '../hooks/useFestivalReels'
 
 export default function ReelsStreamSection() {
   const [activeDay, setActiveDay] = useState('all')
+  const { reels, source } = useFestivalReels()
 
   const filterTabs = [
     { id: 'all', label: 'All 7 Chapters' },
@@ -24,14 +25,14 @@ export default function ReelsStreamSection() {
   ]
 
   const visibleReels = useMemo(() => {
-    if (activeDay === 'all') return reelsData
-    return reelsData.filter((r) => r.chapterId === activeDay)
-  }, [activeDay])
+    if (activeDay === 'all') return reels
+    return reels.filter((r) => r.chapterId === activeDay)
+  }, [activeDay, reels])
 
   return (
     <section className="reels-stream-section" id="festival-reels-stream" aria-labelledby="reels-stream-title">
       <div className="section-header-block">
-        <span className="section-badge"><Film size={14} /> Authentic Festival Moments</span>
+        <span className="section-badge"><Film size={14} /> {source === 'live' ? 'Live Curated Feed' : 'Verified Festival Moments'}</span>
         <h2 id="reels-stream-title">Living Moments & Curated Reels</h2>
         <p>
           Real video reels capturing the morning fog of Mahalaya, artisan hands at Kumartuli, glowing Bodhon pandals, and the Dhunuchi frenzy.
@@ -56,7 +57,12 @@ export default function ReelsStreamSection() {
           <article key={reel.id} className="stream-reel-card">
             <div
               className="stream-reel-poster"
-              style={{ background: reel.thumbnailGradient }}
+              style={{
+                backgroundColor: '#2b1d16',
+                backgroundImage: reel.thumbnailUrl ? `linear-gradient(180deg, rgba(16, 9, 5, .08), rgba(16, 9, 5, .88)), url(${reel.thumbnailUrl})` : reel.thumbnailGradient,
+                backgroundPosition: 'center',
+                backgroundSize: 'cover',
+              }}
             >
               <div className="poster-top-bar">
                 <span className="day-badge">{reel.dayName}</span>
@@ -83,7 +89,7 @@ export default function ReelsStreamSection() {
                   className="watch-ig-pill"
                 >
                   <Play size={14} fill="currentColor" />
-                  <span>Watch on Instagram</span>
+                  <span>Watch on {reel.platform}</span>
                   <ExternalLink size={12} />
                 </a>
               </div>
@@ -104,7 +110,7 @@ export default function ReelsStreamSection() {
       <div className="reels-disclaimer-bar">
         <Sparkles size={14} className="text-gold" />
         <span>
-          Reels attribute original creators and photographers. Connected to public Instagram archives without algorithmic manipulation.
+          Videos are loaded from a moderated live feed and link directly to the attributed creator’s public source.
         </span>
       </div>
     </section>

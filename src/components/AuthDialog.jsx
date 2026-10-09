@@ -3,7 +3,7 @@ import { Copy, Eye, EyeOff, KeyRound, LogIn, LogOut, Mail, ShieldCheck, UserPlus
 import { supabase } from '../lib/supabase'
 import { checkAuthRateLimit, isAdminSession, isEditorSession } from '../lib/authAccess'
 
-export default function AuthDialog({ open, onClose, session, configured, initialMode = 'signin', onToast }) {
+export default function AuthDialog({ open, onClose, session, configured, initialMode = 'signin', requiresPassword = false, onPasswordSaved, onToast }) {
   const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -29,7 +29,12 @@ export default function AuthDialog({ open, onClose, session, configured, initial
     try {
       const { error: operationError } = await operation()
       if (operationError) {
-        setError(operationError.status === 429 ? 'Too many requests. Please wait and try again.' : 'That account request could not be completed. Check your details and try again.')
+        const providerUnavailable = /provider.*(disabled|not enabled|unsupported)/i.test(operationError.message || '')
+        setError(operationError.status === 429
+          ? 'Too many requests. Please wait and try again.'
+          : providerUnavailable
+            ? 'Google sign-in is temporarily unavailable. Use your email and password instead.'
+            : 'That account request could not be completed. Check your details and try again.')
       }
       return !operationError
     } catch {
@@ -65,7 +70,7 @@ export default function AuthDialog({ open, onClose, session, configured, initial
         password,
         data: { ...session?.user?.user_metadata, password_enabled: true, force_password_change: false },
       }))
-      if (ok) { onToast('Password added to this account.'); setMode('signin') }
+      if (ok) { onToast('Email password saved. You can now use Google or email sign-in.'); onPasswordSaved?.() }
       return
     }
     const ok = await run(() => supabase.auth.signInWithPassword({ email, password }))
@@ -73,7 +78,10 @@ export default function AuthDialog({ open, onClose, session, configured, initial
   }
 
   const google = async () => {
-    await run(() => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/` } }))
+    await run(() => supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/`, queryParams: { prompt: 'select_account' } },
+    }))
   }
 
   const signOut = async () => {
@@ -101,22 +109,23 @@ export default function AuthDialog({ open, onClose, session, configured, initial
   }
 
   return (
-    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !requiresPassword) onClose() }}>
       <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <button ref={closeRef} className="dialog-close" type="button" onClick={onClose} aria-label="Close account dialog"><X size={19} /></button>
+        {!requiresPassword && <button ref={closeRef} className="dialog-close" type="button" onClick={onClose} aria-label="Close account dialog"><X size={19} /></button>}
         <span className="auth-mark" lang="bn">উমা</span>
-        <h2 id="auth-title">{session ? 'Your Uma Boron account' : mode === 'signup' ? 'Create your account' : mode === 'recover' ? 'Recover your password' : 'Keep your memories close'}</h2>
+        <h2 id="auth-title">{requiresPassword ? 'Secure your Google account' : session ? 'Your Uma Boron account' : mode === 'signup' ? 'Create your account' : mode === 'recover' ? 'Recover your password' : 'Keep your memories close'}</h2>
         {!configured && <p className="auth-warning">Browser-safe Supabase configuration is missing. Authentication is unavailable.</p>}
         {session ? (
           <div className="signed-in-state">
             <ShieldCheck size={28} />
             <p>Signed in as <strong>{session.user.email}</strong></p>
+            {requiresPassword && <p className="auth-warning">Google verified this email. Create an email password now so you can still sign in if Google is unavailable.</p>}
             {isEditorSession(session) && (
               <p className="editor-access-confirmed"><ShieldCheck size={16} />{isAdminSession(session) ? 'Administrator access active' : 'Editor access active'} — every festival chapter is unlocked.</p>
             )}
-            <button className="primary-action" type="button" onClick={() => setMode('password')}><KeyRound size={17} />Set or change email password</button>
+            {!requiresPassword && <button className="primary-action" type="button" onClick={() => setMode('password')}><KeyRound size={17} />Set or change email password</button>}
             <button className="secondary-action" type="button" onClick={signOut}><LogOut size={17} />Sign out</button>
-            {mode === 'password' && <form onSubmit={submit}><PasswordField value={password} setValue={setPassword} visible={visible} setVisible={setVisible} /><button className="primary-action" disabled={busy || password.length < 8}>{busy ? 'Saving…' : 'Save password'}</button></form>}
+            {(mode === 'password' || requiresPassword) && <form onSubmit={submit}><PasswordField value={password} setValue={setPassword} visible={visible} setVisible={setVisible} autoComplete="new-password" /><button className="primary-action" disabled={busy || password.length < 8}>{busy ? 'Saving…' : 'Save email password'}</button></form>}
             {isAdminSession(session) && (
               <section className="admin-invite-panel" aria-labelledby="admin-invite-title">
                 <h3 id="admin-invite-title"><UserPlus size={17} />Invite an administrator</h3>
@@ -162,6 +171,6 @@ export default function AuthDialog({ open, onClose, session, configured, initial
   )
 }
 
-function PasswordField({ value, setValue, visible, setVisible }) {
-  return <label>Password<span className="password-wrap"><input type={visible ? 'text' : 'password'} autoComplete="current-password" minLength="8" maxLength="128" required value={value} onChange={(event) => setValue(event.target.value)} /><button type="button" onClick={() => setVisible((state) => !state)} aria-label={visible ? 'Hide password' : 'Show password'}>{visible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>
+function PasswordField({ value, setValue, visible, setVisible, autoComplete = 'current-password' }) {
+  return <label>Password<span className="password-wrap"><input type={visible ? 'text' : 'password'} autoComplete={autoComplete} minLength="8" maxLength="128" required value={value} onChange={(event) => setValue(event.target.value)} /><button type="button" onClick={() => setVisible((state) => !state)} aria-label={visible ? 'Hide password' : 'Show password'}>{visible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>
 }

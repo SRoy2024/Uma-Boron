@@ -6,14 +6,13 @@ import {
   MapPin,
   Play,
   Sparkles,
-  VolumeX,
   X,
 } from 'lucide-react'
-import { reelsData } from '../data/reels'
+import { useFestivalReels } from '../hooks/useFestivalReels'
 
 export default function ReelsModal({ isOpen, onClose, initialChapter = 'all' }) {
   const [selectedChapter, setSelectedChapter] = useState(initialChapter)
-  const [activeReelPreview, setActiveReelPreview] = useState(null)
+  const { reels, source } = useFestivalReels()
 
   const chapterFilters = [
     { id: 'all', label: 'All Days' },
@@ -27,9 +26,9 @@ export default function ReelsModal({ isOpen, onClose, initialChapter = 'all' }) 
   ]
 
   const filteredReels = useMemo(() => {
-    if (selectedChapter === 'all') return reelsData
-    return reelsData.filter((r) => r.chapterId === selectedChapter)
-  }, [selectedChapter])
+    if (selectedChapter === 'all') return reels
+    return reels.filter((r) => r.chapterId === selectedChapter)
+  }, [selectedChapter, reels])
 
   if (!isOpen) return null
 
@@ -40,7 +39,7 @@ export default function ReelsModal({ isOpen, onClose, initialChapter = 'all' }) 
           <div>
             <div className="badge-row">
               <span className="gold-chip"><Film size={13} /> Curated Festival Moments</span>
-              <span className="subtle-chip">Durga Puja 2026 Archive</span>
+              <span className="subtle-chip">{source === 'live' ? 'Live moderated feed' : 'Verified fallback feed'}</span>
             </div>
             <h2 id="reels-modal-title">Festival Reels & Visual Moments</h2>
             <p>
@@ -75,7 +74,12 @@ export default function ReelsModal({ isOpen, onClose, initialChapter = 'all' }) 
               <article key={reel.id} className="reel-card-item">
                 <div
                   className="reel-poster-canvas"
-                  style={{ background: reel.thumbnailGradient }}
+                  style={{
+                    backgroundColor: '#2b1d16',
+                    backgroundImage: reel.thumbnailUrl ? `linear-gradient(180deg, rgba(16, 9, 5, .08), rgba(16, 9, 5, .88)), url(${reel.thumbnailUrl})` : reel.thumbnailGradient,
+                    backgroundPosition: 'center',
+                    backgroundSize: 'cover',
+                  }}
                 >
                   <div className="poster-overlay-top">
                     <span className="reel-day-pill">{reel.dayName}</span>
@@ -102,7 +106,7 @@ export default function ReelsModal({ isOpen, onClose, initialChapter = 'all' }) 
                       className="primary-action watch-on-ig-btn"
                     >
                       <Play size={15} fill="currentColor" />
-                      <span>Watch on Instagram</span>
+                      <span>Watch on {reel.platform}</span>
                       <ExternalLink size={13} />
                     </a>
                   </div>

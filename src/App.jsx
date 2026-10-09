@@ -121,6 +121,10 @@ function App() {
   const copy = getChapterCopy(chapter, language)
   const isAdmin = isAdminSession(session)
   const isEditor = isEditorSession(session)
+  const requiresGooglePassword = Boolean(
+    session?.user?.identities?.some((identity) => identity.provider === 'google') &&
+    !session?.user?.user_metadata?.password_enabled,
+  )
   const chapterUnlocked = isChapterUnlocked(activeChapter, now, isEditor)
 
   useEffect(() => {
@@ -128,17 +132,15 @@ function App() {
     supabase.auth.getSession().then(({ data }) => setSession(data.session ?? null))
     const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession)
-      if (
-        event === 'SIGNED_IN' &&
-        nextSession?.user?.app_metadata?.provider === 'google' &&
-        !nextSession?.user?.user_metadata?.password_enabled
-      ) {
-        setAuthInitialMode('password')
-        setAuthOpen(true)
-      }
     })
     return () => data.subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (!requiresGooglePassword) return
+    setAuthInitialMode('password')
+    setAuthOpen(true)
+  }, [requiresGooglePassword])
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 30_000)
@@ -177,6 +179,14 @@ function App() {
   const openAuth = (mode = 'signin') => {
     setAuthInitialMode(mode)
     setAuthOpen(true)
+  }
+
+  const closeAuth = () => {
+    if (requiresGooglePassword) {
+      setToast('Create an email password or sign out before continuing.')
+      return
+    }
+    setAuthOpen(false)
   }
 
   return (
@@ -406,10 +416,12 @@ function App() {
 
       <AuthDialog
         open={authOpen}
-        onClose={() => setAuthOpen(false)}
+        onClose={closeAuth}
         session={session}
         configured={hasSupabaseConfig}
         initialMode={authInitialMode}
+        requiresPassword={requiresGooglePassword}
+        onPasswordSaved={() => setAuthOpen(false)}
         onToast={setToast}
       />
 
