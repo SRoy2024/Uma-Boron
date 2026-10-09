@@ -1,0 +1,14 @@
+:root { font-family: system-ui, sans-serif; color: #fff9ea; background: #17261f; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+*, *::before, *::after { box-sizing: border-box; }
+html { min-width: 0; background: #17261f; overflow-x: clip; }
+body { margin: 0; min-width: 0; min-height: 100vh; overflow-x: clip; }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+img, video, iframe { max-width: 100%; }
+
+.fatal-error-shell { min-height:100svh; display:grid; place-items:center; padding:24px; color:#fffdf8; background:radial-gradient(circle at 50% 18%,#3b4d70,#111a2d 68%); }
+.fatal-error-card { width:min(520px,100%); padding:clamp(24px,6vw,48px); border:1px solid rgba(239,220,166,.45); border-radius:24px; background:rgba(17,26,45,.92); box-shadow:0 28px 80px rgba(0,0,0,.45); text-align:center; }
+.fatal-error-card > span { color:#efdca6; font-size:2.4rem; }
+.fatal-error-card h1 { margin:.7rem 0; font:600 clamp(2rem,7vw,3.2rem)/1.02 Georgia,serif; }
+.fatal-error-card p { margin:0 auto 1.4rem; max-width:42ch; color:rgba(255,253,248,.72); line-height:1.6; }
+.fatal-error-card button { min-height:46px; padding:0 20px; border:1px solid #efdca6; border-radius:999px; background:#efdca6; color:#172033; font-weight:800; cursor:pointer; }

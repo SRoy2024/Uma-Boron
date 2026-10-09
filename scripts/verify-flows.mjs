@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict'
+import { contactInferenceTestCases, inferRelationshipFromContactName } from '../src/lib/contactInference.js'
+import { pujoCalendarEvents, generateGoogleCalendarUrl, generateICSContent } from '../src/data/calendarEvents.js'
+import { festivalSchedule, isChapterUnlocked } from '../src/lib/festivalSchedule.js'
+import { WMO_WEATHER_MAP } from '../src/lib/weather.js'
+import { checkAuthRateLimit, isEditorEmail } from '../src/lib/authAccess.js'
+
+for (const [name, expected] of contactInferenceTestCases) {
+  assert.equal(inferRelationshipFromContactName(name).id, expected, `contact inference failed for ${name}`)
+}
+
+assert.equal(pujoCalendarEvents.length, 8, 'calendar must contain eight reminders')
+const calendar = generateICSContent(pujoCalendarEvents)
+assert.ok(calendar.startsWith('BEGIN:VCALENDAR\r\nVERSION:2.0'), 'calendar header is invalid')
+assert.ok(calendar.endsWith('END:VCALENDAR'), 'calendar footer is invalid')
+assert.equal((calendar.match(/BEGIN:VEVENT/g) || []).length, pujoCalendarEvents.length, 'event count mismatch')
+assert.equal((calendar.match(/BEGIN:VALARM/g) || []).length, pujoCalendarEvents.length, 'alarm count mismatch')
+for (const event of pujoCalendarEvents) {
+  assert.match(event.startUTC, /^2026\d{4}T\d{6}Z$/, `${event.id} start must be UTC`) 
+  assert.match(event.endUTC, /^2026\d{4}T\d{6}Z$/, `${event.id} end must be UTC`)
+  assert.ok(calendar.includes(`UID:${event.id}@umaboron.app`), `${event.id} UID missing`)
+  const googleUrl = new URL(generateGoogleCalendarUrl(event))
+  assert.equal(googleUrl.origin, 'https://calendar.google.com')
+  assert.equal(googleUrl.searchParams.get('action'), 'TEMPLATE')
+  assert.equal(googleUrl.searchParams.get('text'), event.title)
+  assert.equal(googleUrl.searchParams.get('dates'), `${event.startUTC}/${event.endUTC}`)
+  assert.ok(new Date(`${event.startUTC.slice(0, 4)}-${event.startUTC.slice(4, 6)}-${event.startUTC.slice(6, 8)}T${event.startUTC.slice(9, 11)}:${event.startUTC.slice(11, 13)}:${event.startUTC.slice(13, 15)}Z`) < new Date(`${event.endUTC.slice(0, 4)}-${event.endUTC.slice(4, 6)}-${event.endUTC.slice(6, 8)}T${event.endUTC.slice(9, 11)}:${event.endUTC.slice(11, 13)}:${event.endUTC.slice(13, 15)}Z`), `${event.id} must end after it starts`)
+}
+
+assert.equal(isEditorEmail('sohamroy.pkt@gmail.com'), true)
+assert.equal(isEditorEmail(' SOHAMROY.PKT@GMAIL.COM '), true)
+assert.equal(isEditorEmail('visitor@example.com'), false)
+assert.equal(checkAuthRateLimit([1, 2, 3, 4], 60_000).allowed, true)
+assert.equal(checkAuthRateLimit([59_995, 59_996, 59_997, 59_998, 59_999], 60_000).allowed, false)
+
+for (const [chapterId, schedule] of Object.entries(festivalSchedule)) {
+  const unlock = new Date(schedule.unlockAt)
+  assert.equal(isChapterUnlocked(chapterId, new Date(unlock.getTime() - 1)), false, `${chapterId} unlocked early`)
+  assert.equal(isChapterUnlocked(chapterId, unlock), true, `${chapterId} did not unlock on time`)
+  assert.equal(isChapterUnlocked(chapterId, new Date(0), true), true, `${chapterId} editor override failed`)
+}
+
+assert.equal(WMO_WEATHER_MAP[0].condition, 'clear')
+assert.equal(WMO_WEATHER_MAP[3].condition, 'cloudy')
+assert.equal(WMO_WEATHER_MAP[63].condition, 'rain')
+
+console.log(`Verified ${contactInferenceTestCases.length} contact cases, ${pujoCalendarEvents.length} calendar/Google links, ${Object.keys(festivalSchedule).length} release gates, editor auth/rate limits, and live-weather ambience mapping.`)
