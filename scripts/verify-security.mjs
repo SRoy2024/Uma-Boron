@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
-const [headers, redirects, appCss, player, auth, memory, migration, reelsMigration, reelsHook, app, main, errorBoundary] = await Promise.all([
+const [headers, redirects, appCss, player, auth, memory, migration, reelsMigration, reelsHook, mapSection, app, privacy, terms, main, errorBoundary] = await Promise.all([
   read('public/_headers'),
   read('public/_redirects'),
   read('src/App.css'),
@@ -12,7 +12,10 @@ const [headers, redirects, appCss, player, auth, memory, migration, reelsMigrati
   read('supabase/migrations/202610090001_security_hardening.sql'),
   read('supabase/migrations/202610090003_festival_reels.sql'),
   read('src/hooks/useFestivalReels.js'),
+  read('src/components/PandalMapSection.jsx'),
   read('src/App.jsx'),
+  read('public/privacy.html'),
+  read('public/terms.html'),
   read('src/main.jsx'),
   read('src/components/AppErrorBoundary.jsx'),
 ])
@@ -59,6 +62,14 @@ for (const reelsRule of [
 assert.match(reelsHook, /SAFE_VIDEO_HOSTS/, 'reel URLs are not allow-listed')
 assert.match(reelsHook, /\.from\('festival_reels'\)/, 'reels are not loaded from the live database')
 assert.ok(headers.includes('https://i.ytimg.com'), 'YouTube thumbnails are blocked by the CSP')
+assert.ok(headers.includes('https://maps.google.com'), 'Google Maps embeds are blocked by the CSP')
+assert.match(mapSection, /fetchNearbyPujos/, 'nearby venues are not loaded from a live provider')
+assert.match(mapSection, /buildGoogleMapsEmbedUrl/, 'the map is not centred dynamically on the selected location')
+assert.doesNotMatch(mapSection, /pujosData/, 'the live nearby map must not merge a hardcoded venue list')
+assert.match(privacy, /Supabase Auth/, 'privacy policy must identify the authentication processor')
+assert.match(privacy, /Google sign-in/, 'privacy policy must explain Google account data')
+assert.match(terms, /Acceptable use/, 'terms must define acceptable use')
+assert.match(app, /href="\/privacy\.html"/, 'privacy policy is not linked from the app')
 
 for (const responsiveRule of [
   '@media (min-width:1600px)',

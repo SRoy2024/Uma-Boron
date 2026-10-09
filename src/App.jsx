@@ -23,7 +23,6 @@ import MemoryPanel from './components/MemoryPanel'
 import PersistentPlayer from './components/PersistentPlayer'
 import AuthDialog from './components/AuthDialog'
 import LocationWeatherBar, { popularCities } from './components/LocationWeatherBar'
-import NearbyPujosModal from './components/NearbyPujosModal'
 import ReelsModal from './components/ReelsModal'
 import CalendarExportModal from './components/CalendarExportModal'
 import SupportModal from './components/SupportModal'
@@ -104,7 +103,6 @@ function App() {
   const [now, setNow] = useState(() => new Date())
 
   // Modals
-  const [pujosModalOpen, setPujosModalOpen] = useState(false)
   const [reelsModalOpen, setReelsModalOpen] = useState(false)
   const [calendarModalOpen, setCalendarModalOpen] = useState(false)
   const [supportModalOpen, setSupportModalOpen] = useState(false)
@@ -383,11 +381,6 @@ function App() {
       </aside>
 
       {/* Additional Modals for Deep Direct Actions */}
-      <NearbyPujosModal
-        isOpen={pujosModalOpen}
-        onClose={() => setPujosModalOpen(false)}
-      />
-
       <ReelsModal
         isOpen={reelsModalOpen}
         onClose={() => setReelsModalOpen(false)}
@@ -437,6 +430,8 @@ function App() {
       
       <footer className="site-credit">
         <span>Created by Soham Roy · Uma Boron, Durga Puja 2026</span>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
         <button type="button" className="footer-support-link" onClick={() => setSupportModalOpen(true)}>
           <Heart size={13} fill="currentColor" /> Support the project
         </button>

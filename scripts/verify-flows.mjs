@@ -5,6 +5,7 @@ import { festivalSchedule, isChapterUnlocked } from '../src/lib/festivalSchedule
 import { WMO_WEATHER_MAP } from '../src/lib/weather.js'
 import { ADMIN_EMAILS, checkAuthRateLimit, isAdminSession, isEditorEmail, isEditorSession } from '../src/lib/authAccess.js'
 import { reelsData } from '../src/data/reels.js'
+import { buildGoogleDirectionsUrl, buildGoogleMapsEmbedUrl, buildGoogleMapsSearchUrl, calculateDistance } from '../src/lib/nearbyPujos.js'
 
 for (const [name, expected] of contactInferenceTestCases) {
   assert.equal(inferRelationshipFromContactName(name).id, expected, `contact inference failed for ${name}`)
@@ -64,4 +65,12 @@ for (const reel of reelsData) {
   assert.equal(reel.platform, 'YouTube', `${reel.id} platform does not match its URL`)
 }
 
-console.log(`Verified ${contactInferenceTestCases.length} contact cases, ${pujoCalendarEvents.length} calendar/Google links, ${Object.keys(festivalSchedule).length} release gates, ${reelsData.length} trusted festival videos, editor auth/rate limits, and live-weather ambience mapping.`)
+assert.ok(calculateDistance(12.9716, 77.5946, 12.9716, 77.5946) < 0.001, 'same-coordinate map distance must be zero')
+assert.ok(calculateDistance(12.9716, 77.5946, 19.076, 72.8777) > 800, 'map distance must use real coordinates')
+const mapsSearch = buildGoogleMapsSearchUrl(19.076, 72.8777, 'Durga Puja pandal')
+assert.match(mapsSearch, /^https:\/\/www\.google\.com\/maps\/search\//, 'Google Maps search URL is invalid')
+assert.ok(mapsSearch.includes('@19.076,72.8777,12z'), 'Google Maps search is not centred on the selected location')
+assert.match(buildGoogleMapsEmbedUrl(19.076, 72.8777, 'Mumbai'), /^https:\/\/maps\.google\.com\/maps\?/, 'Google map embed URL is invalid')
+assert.match(buildGoogleDirectionsUrl(19.076, 72.8777, 19.1257, 72.9194), /origin=19\.076,72\.8777&destination=19\.1257,72\.9194/, 'Google directions coordinates are invalid')
+
+console.log(`Verified ${contactInferenceTestCases.length} contact cases, ${pujoCalendarEvents.length} calendar/Google links, ${Object.keys(festivalSchedule).length} release gates, ${reelsData.length} trusted festival videos, live coordinate maps, editor auth/rate limits, and weather ambience mapping.`)
